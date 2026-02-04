@@ -600,6 +600,27 @@ function guardAdmin() {
   return false;
 }
 
+async function confirmPinForReset() {
+  if (!hasPinSet()) {
+    toast("관리자 PIN이 설정되지 않았습니다. 설정에서 PIN을 먼저 등록하세요.");
+    return false;
+  }
+  const pin = await dialogPrompt("초기화 PIN 확인", `
+    <div class="field">
+      <label>안전을 위해 PIN을 다시 입력해주세요.</label>
+      <input id="pinResetInput" type="password" inputmode="numeric" placeholder="PIN 입력" />
+    </div>
+  `, () => $("#pinResetInput")?.value?.trim());
+
+  if (!pin) return false;
+  const { hash } = await pinHash(pin, data.settings.pinSalt);
+  if (hash !== data.settings.pinHash) {
+    toast("PIN이 올바르지 않아요.");
+    return false;
+  }
+  return true;
+}
+
 // -------------------- Google Books API --------------------
 async function googleBooksSearch(query) {
   const q = query.trim();
@@ -1116,6 +1137,8 @@ $("#resetBtn").addEventListener("click", async () => {
     <div class="muted mt-8">도서/대여/활동 기록이 전부 삭제됩니다.</div>
   `);
   if (!ok) return;
+  const pinOk = await confirmPinForReset();
+  if (!pinOk) return;
   data = defaultData();
   save(data);
   unlocked = false;
