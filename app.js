@@ -374,17 +374,31 @@ function renderBooks() {
     return true;
   });
 
+  const nowYm = new Date().toISOString().slice(0, 7);
+  const monthly = filtered.filter((b) => (b.addedAt || "").slice(0, 7) === nowYm);
+  const rest = filtered.filter((b) => (b.addedAt || "").slice(0, 7) !== nowYm);
+
+  const monthlyList = $("#monthlyBooksList");
+  monthlyList.innerHTML = "";
+  if (monthly.length === 0) {
+    $("#monthlyBooksEmpty").classList.add("is-show");
+  } else {
+    $("#monthlyBooksEmpty").classList.remove("is-show");
+    monthly
+      .sort((a, b) => a.invNo.localeCompare(b.invNo))
+      .forEach((b, idx) => monthlyList.appendChild(bookCard(b, idx)));
+  }
+
   const list = $("#booksList");
   list.innerHTML = "";
-  if (filtered.length === 0) {
+  if (rest.length === 0) {
     $("#booksEmpty").classList.add("is-show");
-    return;
+  } else {
+    $("#booksEmpty").classList.remove("is-show");
+    rest
+      .sort((a, b) => a.invNo.localeCompare(b.invNo))
+      .forEach((b, idx) => list.appendChild(bookCard(b, idx)));
   }
-  $("#booksEmpty").classList.remove("is-show");
-
-  filtered
-    .sort((a, b) => a.invNo.localeCompare(b.invNo))
-    .forEach((b, idx) => list.appendChild(bookCard(b, idx)));
 }
 
 function bookCard(b, idx) {
@@ -414,6 +428,8 @@ function bookCard(b, idx) {
   const authors = (b.authors || []).join(", ") || "";
   const hasThumb = !!b.thumbnail;
 
+  const summary = truncateText(stripTags(b.description || ""), 140);
+
   el.innerHTML = `
     <div class="book-cover">
       <div class="cover-frame${hasThumb ? "" : " no-img"}">
@@ -430,6 +446,7 @@ function bookCard(b, idx) {
     <div class="book-info">
       <div class="book-title">${escapeHtml(b.title || "")}</div>
       <div class="book-sub">${escapeHtml(authors)}</div>
+      ${summary ? `<div class="book-summary">${escapeHtml(summary)}</div>` : ""}
       <div class="book-meta-lines">
         <div class="small">인벤번호: <b>${escapeHtml(b.invNo)}</b></div>
         <div class="small">ISBN: ${escapeHtml(b.isbn13 || b.isbn10 || "-")}</div>
@@ -1047,11 +1064,21 @@ function escapeHtml(s) {
     .replaceAll("'", "&#39;");
 }
 function escapeAttr(s){ return escapeHtml(s).replaceAll("\n"," "); }
+function stripTags(s){ return String(s ?? "").replace(/<[^>]*>/g, ""); }
+function truncateText(s, max){
+  const t = String(s ?? "").trim();
+  if (!t) return "";
+  if (t.length <= max) return t;
+  return t.slice(0, max - 1) + "…";
+}
 
 // show empty placeholders
 function ensureEmptyStates() {
   $("#searchEmpty").classList.add("is-show");
   $("#booksEmpty").classList.toggle("is-show", Object.keys(data.books).length === 0);
+  const nowYm = new Date().toISOString().slice(0, 7);
+  const monthlyCount = Object.values(data.books).filter((b) => (b.addedAt || "").slice(0, 7) === nowYm).length;
+  $("#monthlyBooksEmpty").classList.toggle("is-show", monthlyCount === 0);
 }
 
 // -------------------- Small UX: Enter to search --------------------
@@ -1063,7 +1090,9 @@ $("#q").addEventListener("keydown", (e) => {
 const VIEW_KEY = "goc_library_view";
 function applyView(view) {
   const list = $("#booksList");
+  const monthlyList = $("#monthlyBooksList");
   list.classList.toggle("list-view", view === "list");
+  monthlyList?.classList.toggle("list-view", view === "list");
   $("#viewGridBtn")?.classList.toggle("is-active", view === "grid");
   $("#viewListBtn")?.classList.toggle("is-active", view === "list");
   localStorage.setItem(VIEW_KEY, view);

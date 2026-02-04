@@ -97,6 +97,11 @@ a{color:inherit}
 .muted{color:var(--muted); font-size:12px}
 .h2{margin:0; font-size:18px}
 .h3{margin:0; font-size:14px; color:#2f6bff}
+.section-sep{
+  height:1px;
+  background: var(--line);
+  margin: 18px 0 14px;
+}
 
 .row{display:flex}
 .between{justify-content:space-between}
@@ -275,6 +280,16 @@ select{cursor:pointer}
 .book-meta-lines{margin-top:6px}
 .book-title{font-weight:800; font-size:14px; line-height:1.3}
 .book-sub{color:var(--muted); font-size:12px; margin-top:6px}
+.book-summary{
+  margin-top:8px;
+  font-size:12px;
+  color:#4b5563;
+  line-height:1.4;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
 .badge{
   display:inline-flex; align-items:center;
   padding:4px 8px;
