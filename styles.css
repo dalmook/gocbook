@@ -556,3 +556,248 @@ dialog{
 #readingKingCard .rk-controls { min-width: 220px; }
 #readingKingCard .rk-month { width: 160px; max-width: 180px; }
 #readingKingCard .pill { font-weight: 800; }
+
+/* =========================
+   🏆 Reading King (Flash UI)
+   ========================= */
+
+#page-kings{
+  background: radial-gradient(1200px 600px at 10% -10%, rgba(255, 215, 0, .18), transparent 60%),
+              radial-gradient(900px 500px at 90% 0%, rgba(255, 105, 180, .14), transparent 55%),
+              radial-gradient(900px 520px at 50% 120%, rgba(0, 180, 255, .12), transparent 55%);
+}
+
+#readingKingCard{
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,.08);
+  box-shadow: 0 12px 30px rgba(0,0,0,.08);
+}
+
+#readingKingCard::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background: linear-gradient(120deg,
+    rgba(255, 215, 0, .35),
+    rgba(255, 105, 180, .25),
+    rgba(0, 180, 255, .25),
+    rgba(255, 215, 0, .35)
+  );
+  opacity:.45;
+  filter: blur(18px);
+  transform: translateZ(0);
+  pointer-events:none;
+}
+
+#readingKingCard.rk-pop::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255,215,0,.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 22% 8%, rgba(0,180,255,.40) 0 2px, transparent 3px),
+    radial-gradient(circle at 35% 22%, rgba(255,105,180,.45) 0 2px, transparent 3px),
+    radial-gradient(circle at 62% 10%, rgba(255,215,0,.45) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 20%, rgba(0,180,255,.35) 0 2px, transparent 3px),
+    radial-gradient(circle at 88% 12%, rgba(255,105,180,.35) 0 2px, transparent 3px);
+  animation: rkConfetti 900ms ease-out 1;
+  opacity:.0;
+}
+
+@keyframes rkConfetti{
+  0%{ opacity:0; transform: translateY(10px) scale(.98); }
+  30%{ opacity:.9; }
+  100%{ opacity:0; transform: translateY(-18px) scale(1.02); }
+}
+
+/* HERO */
+.rk-hero{
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, rgba(255,215,0,.16), rgba(255,105,180,.12), rgba(0,180,255,.12));
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+.rk-hero__title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing:-.3px;
+}
+
+.rk-trophy{
+  display:inline-block;
+  animation: rkFloat 1.6s ease-in-out infinite;
+}
+
+.rk-spark{
+  display:inline-block;
+  animation: rkPulse 1.1s ease-in-out infinite;
+}
+
+.rk-hero__sub{
+  margin-top:6px;
+  opacity:.75;
+  font-size: 12.5px;
+}
+
+@keyframes rkFloat{
+  0%,100%{ transform: translateY(0); }
+  50%{ transform: translateY(-4px); }
+}
+@keyframes rkPulse{
+  0%,100%{ transform: scale(1); opacity:.9; }
+  50%{ transform: scale(1.12); opacity:1; }
+}
+
+/* PODIUM GRID */
+.rk-podium-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 860px){
+  .rk-podium-grid{ grid-template-columns: 1fr; }
+}
+
+.rk-podium-card{
+  position:relative;
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255,255,255,.75);
+  border: 1px solid rgba(0,0,0,.06);
+  overflow:hidden;
+}
+
+.rk-podium-card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: linear-gradient(120deg, rgba(255,255,255,.0), rgba(255,255,255,.45), rgba(255,255,255,.0));
+  transform: translateX(-120%);
+  animation: rkShimmer 2.8s ease-in-out infinite;
+  pointer-events:none;
+}
+
+@keyframes rkShimmer{
+  0%{ transform: translateX(-120%); opacity:.0; }
+  30%{ opacity:.55; }
+  60%{ opacity:.35; }
+  100%{ transform: translateX(120%); opacity:.0; }
+}
+
+.rk-podium-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+}
+
+.rk-podium-title{
+  font-weight: 900;
+}
+
+.rk-podium-chip{
+  font-size:12px;
+  font-weight:800;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.06);
+}
+
+.rk-podium{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.rk-spot{
+  flex: 1;
+  border-radius: 16px;
+  padding: 10px 10px 12px;
+  border: 1px solid rgba(0,0,0,.06);
+  background: rgba(255,255,255,.85);
+  text-align:center;
+  position:relative;
+  min-height: 92px;
+  transform: translateZ(0);
+}
+
+.rk-spot--1{
+  min-height: 112px;
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 10px 22px rgba(0,0,0,.10);
+}
+
+.rk-spot--2{ min-height: 98px; }
+.rk-spot--3{ min-height: 90px; opacity:.95; }
+
+.rk-crown{
+  position:absolute;
+  top:-18px;
+  left:50%;
+  transform: translateX(-50%);
+  font-size: 22px;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.15));
+}
+
+.rk-medal{
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.rk-name{
+  font-weight: 900;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.rk-count{
+  margin-top: 6px;
+  font-weight: 800;
+  font-size: 12px;
+  opacity: .8;
+}
+
+/* LIST RIGHT (count + bar) */
+.rk-right{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap: 6px;
+}
+
+.rk-bar{
+  width: 120px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.08);
+  overflow:hidden;
+}
+
+.rk-bar__fill{
+  height:100%;
+  width:0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255,215,0,.95), rgba(255,105,180,.85), rgba(0,180,255,.85));
+  transition: width 380ms ease-out;
+}
+
+/* reduce motion */
+@media (prefers-reduced-motion: reduce){
+  #readingKingCard::before,
+  #readingKingCard.rk-pop::after,
+  .rk-trophy,
+  .rk-spark,
+  .rk-podium-card::before{
+    animation: none !important;
+  }
+  .rk-bar__fill{ transition: none !important; }
+}
