@@ -295,7 +295,7 @@ function renderDashboard() {
   }
 }
 
-} } } renderReadingKings(); } function ensureReadingKingSection() {
+function ensureReadingKingSection() {
   const dash = $("#page-dashboard");
   if (!dash) return null;
 
@@ -712,6 +712,7 @@ function renderSettings() {
 function renderAll() {
   renderHeader();
   renderDashboard();
+  renderReadingKings();
   renderBooks();
   renderLoans();
   renderSettings();
