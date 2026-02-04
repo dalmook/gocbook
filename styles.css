@@ -552,3 +552,7 @@ dialog{
   display:none;
   z-index:100;
 }
+/* ✅ Reading King */
+#readingKingCard .rk-controls { min-width: 220px; }
+#readingKingCard .rk-month { width: 160px; max-width: 180px; }
+#readingKingCard .pill { font-weight: 800; }
