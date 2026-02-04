@@ -1067,7 +1067,7 @@ async function editBook(invNo) {
   if (!b) return;
 
   const form = await dialogForm("도서 정보 수정", `
-    <div class="muted">${escapeHtml(invNo)} ? ${escapeHtml(b.title)}</div>
+    <div class="muted">${escapeHtml(invNo)} · ${escapeHtml(b.title)}</div>
     <div class="grid-2 mt-12">
       <div class="field"><label>제목</label><input id="eTitle" value="${escapeAttr(b.title || "")}" /></div>
       <div class="field"><label>부제</label><input id="eSub" value="${escapeAttr(b.subtitle || "")}" /></div>
@@ -1310,6 +1310,7 @@ function truncateText(s, max){
   if (t.length <= max) return t;
   return t.slice(0, max - 1) + "…";
 }
+
 
 // show empty placeholders
 function ensureEmptyStates() {
