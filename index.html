@@ -87,7 +87,81 @@
           </div>
         </div>
     
-        <div class="grid-2 mt-12">
+<!-- ✨ HERO + PODIUM -->
+<div class="rk-hero mt-12">
+  <div class="rk-hero__title">
+    <span class="rk-trophy">🏆</span>
+    <span>오늘의 랭킹왕</span>
+    <span class="rk-spark">✨</span>
+  </div>
+  <div class="rk-hero__sub">
+    “반납” 기준 · 같은 사람은 하루 최대 1권만 인정 (악용 방지)
+  </div>
+</div>
+
+<div class="rk-podium-grid mt-12">
+  <!-- 월별 포디움 -->
+  <div class="rk-podium-card">
+    <div class="rk-podium-head">
+      <div class="rk-podium-title">월별 포디움</div>
+      <div class="rk-podium-chip"><span id="rkMonthLabel"></span></div>
+    </div>
+
+    <div class="rk-podium" id="rkPodiumMonth">
+      <div class="rk-spot rk-spot--2" id="rkM2">
+        <div class="rk-medal">🥈</div>
+        <div class="rk-name">-</div>
+        <div class="rk-count">0권</div>
+      </div>
+
+      <div class="rk-spot rk-spot--1" id="rkM1">
+        <div class="rk-crown">👑</div>
+        <div class="rk-medal">🥇</div>
+        <div class="rk-name">-</div>
+        <div class="rk-count">0권</div>
+      </div>
+
+      <div class="rk-spot rk-spot--3" id="rkM3">
+        <div class="rk-medal">🥉</div>
+        <div class="rk-name">-</div>
+        <div class="rk-count">0권</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 누적 포디움 -->
+  <div class="rk-podium-card">
+    <div class="rk-podium-head">
+      <div class="rk-podium-title">누적 포디움</div>
+      <div class="rk-podium-chip">ALL</div>
+    </div>
+
+    <div class="rk-podium" id="rkPodiumAll">
+      <div class="rk-spot rk-spot--2" id="rkA2">
+        <div class="rk-medal">🥈</div>
+        <div class="rk-name">-</div>
+        <div class="rk-count">0권</div>
+      </div>
+
+      <div class="rk-spot rk-spot--1" id="rkA1">
+        <div class="rk-crown">👑</div>
+        <div class="rk-medal">🥇</div>
+        <div class="rk-name">-</div>
+        <div class="rk-count">0권</div>
+      </div>
+
+      <div class="rk-spot rk-spot--3" id="rkA3">
+        <div class="rk-medal">🥉</div>
+        <div class="rk-name">-</div>
+        <div class="rk-count">0권</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 기존 리스트(월별/누적) 유지 + 게이지 표시 -->
+<div class="grid-2 mt-12">
+
           <div>
             <div class="h3">월별 TOP</div>
             <div id="rkMonthlyList" class="list mt-8"></div>
