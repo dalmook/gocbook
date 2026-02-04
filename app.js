@@ -365,13 +365,28 @@ function collectLoanEvents() {
 }
 
 function topBorrowers(events) {
+  // ✅ 하루에 최대 1권만 인정 (대여 악용 방지)
+  // 같은 borrower가 같은 loanDate(YYYY-MM-DD)에 여러 번 대여해도 1점만
+  const seenPerDay = new Set(); // key = borrower|loanDate
   const m = new Map();
-  for (const e of events) m.set(e.borrower, (m.get(e.borrower) || 0) + 1);
+
+  for (const e of events) {
+    const borrower = String(e.borrower || "").trim();
+    const loanDate = String(e.loanDate || "").slice(0, 10); // YYYY-MM-DD
+    if (!borrower || !loanDate) continue;
+
+    const k = `${borrower}|${loanDate}`;
+    if (seenPerDay.has(k)) continue;
+    seenPerDay.add(k);
+
+    m.set(borrower, (m.get(borrower) || 0) + 1);
+  }
 
   const arr = Array.from(m.entries()).map(([name, cnt]) => ({ name, cnt }));
   arr.sort((a, b) => (b.cnt - a.cnt) || a.name.localeCompare(b.name));
   return arr;
 }
+
 
 function renderReadingKings() {
   const sec = ensureReadingKingSection();
