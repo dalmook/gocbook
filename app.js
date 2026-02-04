@@ -1,9 +1,20 @@
 /* GOC Library - GitHub Pages (Static)
  * Storage: localStorage (single-browser)
- * Book info: Google Books API (public volumes search)
+ * Book info: Hybrid (Google Books API + Open Library fallback)
  */
 
 const STORAGE_KEY = "goc_library_v1";
+const GOOGLE_BOOKS_API_KEY = "AIzaSyB75eePCH1FTX3jXLA2mfk0EwoV_uf-Yxg";
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBEluBIaKWmj7TaJ32eisZ9Noq52P8ZNoQ",
+  authDomain: "gocbook2.firebaseapp.com",
+  projectId: "gocbook2",
+  storageBucket: "gocbook2.firebasestorage.app",
+  messagingSenderId: "152276564487",
+  appId: "1:152276564487:web:8dc5644bdc867438cd48a2",
+  measurementId: "G-BTD4Y2213N"
+};
+const FIREBASE_DOC_ID = "default";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -36,27 +47,81 @@ function defaultData() {
   };
 }
 
+let db = null;
+let remoteReady = false;
+let remoteSaveTimer = null;
+
+function initFirebase() {
+  try {
+    if (!FIREBASE_CONFIG?.apiKey || !window.firebase) return;
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    remoteReady = true;
+  } catch (e) {
+    console.warn("Firebase init failed", e);
+  }
+}
+
+function normalizeData(input) {
+  const base = defaultData();
+  const data = input && typeof input === "object" ? input : base;
+  if (!data.version) data.version = 1;
+  if (!data.settings) data.settings = base.settings;
+  if (!data.books) data.books = {};
+  if (!data.activity) data.activity = [];
+  if (!Number.isFinite(data.seq)) data.seq = 1;
+  return data;
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultData();
     const data = JSON.parse(raw);
-    // very light migration
-    if (!data.version) data.version = 1;
-    if (!data.settings) data.settings = defaultData().settings;
-    if (!data.books) data.books = {};
-    if (!data.activity) data.activity = [];
-    if (!Number.isFinite(data.seq)) data.seq = 1;
-    return data;
+    return normalizeData(data);
   } catch {
     return defaultData();
   }
 }
 
-function save(data) {
+function saveLocal(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+function scheduleRemoteSave(data) {
+  if (!remoteReady || !db) return;
+  clearTimeout(remoteSaveTimer);
+  remoteSaveTimer = setTimeout(async () => {
+    try {
+      await db.collection("libraries").doc(FIREBASE_DOC_ID).set(data);
+    } catch (e) {
+      console.warn("Firebase save failed", e);
+      toast("Firebase 저장 실패. 로컬에 저장됨.");
+    }
+  }, 800);
+}
+
+function save(data) {
+  saveLocal(data);
+  scheduleRemoteSave(data);
+}
+
+async function loadRemoteData(localData) {
+  if (!remoteReady || !db) return localData;
+  try {
+    const snap = await db.collection("libraries").doc(FIREBASE_DOC_ID).get();
+    if (snap.exists) {
+      const remote = normalizeData(snap.data());
+      saveLocal(remote);
+      return remote;
+    }
+    await db.collection("libraries").doc(FIREBASE_DOC_ID).set(localData);
+  } catch (e) {
+    console.warn("Firebase load failed", e);
+    toast("Firebase 연결 실패. 로컬 데이터 사용.");
+  }
+  return localData;
+}
 function toast(msg) {
   const el = $("#toast");
   el.textContent = msg;
@@ -214,18 +279,29 @@ function renderSearchResults(results) {
   }
   $("#searchEmpty").classList.remove("is-show");
 
-  results.forEach((r) => {
+  results.forEach((r, idx) => {
     const el = document.createElement("div");
     el.className = "book";
+    const authors = (r.authors || []).join(", ") || "저자 정보 없음";
+    const hasThumb = !!r.thumbnail;
     el.innerHTML = `
-      <div class="book-top">
-        <img class="cover" src="${escapeAttr(r.thumbnail || "")}" alt="" onerror="this.style.display='none'"/>
-        <div class="book-meta">
-          <div class="book-title">${escapeHtml(r.title || "(제목 없음)")}</div>
-          <div class="book-sub">${escapeHtml((r.authors || []).join(", ") || "저자 정보 없음")}</div>
+      <div class="book-cover">
+        <div class="cover-frame${hasThumb ? "" : " no-img"}">
+          ${hasThumb ? `<img class="cover-img" src="${escapeAttr(r.thumbnail || "")}" alt="" onerror="this.remove(); this.parentElement.classList.add('no-img');"/>` : ""}
+          <div class="cover-placeholder">
+            <div class="ph-title">${escapeHtml(r.title || "(제목 없음)")}</div>
+            <div class="ph-sub">${escapeHtml(authors)}</div>
+          </div>
+        </div>
+        <div class="cover-badge badge good">검색 결과</div>
+        ${idx < 3 ? `<div class="cover-ribbon">추천</div>` : ""}
+      </div>
+      <div class="book-info">
+        <div class="book-title">${escapeHtml(r.title || "(제목 없음)")}</div>
+        <div class="book-sub">${escapeHtml(authors)}</div>
+        <div class="book-meta-lines">
           <div class="small">${escapeHtml(r.publisher || "")} ${escapeHtml(r.publishedDate || "")}</div>
           <div class="small">ISBN: ${escapeHtml(r.isbn13 || r.isbn10 || "-")}</div>
-          <div class="badge good">검색 결과</div>
         </div>
       </div>
       <div class="actions">
@@ -269,17 +345,26 @@ function renderBooks() {
 
   filtered
     .sort((a, b) => a.invNo.localeCompare(b.invNo))
-    .forEach((b) => list.appendChild(bookCard(b)));
+    .forEach((b, idx) => list.appendChild(bookCard(b, idx)));
 }
 
-function bookCard(b) {
+function bookCard(b, idx) {
   const el = document.createElement("div");
   el.className = "book";
 
-  const badge = (() => {
-    if (b.status === "available") return `<div class="badge good">비치중</div>`;
-    if (isOverdue(b)) return `<div class="badge bad">연체</div>`;
-    return `<div class="badge warn">대여중</div>`;
+  const statusLabel = (() => {
+    if (b.status === "available") return { text: "비치중", cls: "good" };
+    if (isOverdue(b)) return { text: "연체", cls: "bad" };
+    return { text: "대여중", cls: "warn" };
+  })();
+
+  const dueLine = (() => {
+    if (b.status !== "loaned") return "";
+    const due = b.currentLoan?.dueDate || "";
+    const diff = daysDiff(todayYmd(), due);
+    const tag = diff < 0 ? `D${diff}` : `D-${diff}`;
+    const borrower = b.currentLoan?.borrower || "-";
+    return `${escapeHtml(borrower)} · ${escapeHtml(due)} (${tag})`;
   })();
 
   const loanLine = (b.status === "loaned")
@@ -287,21 +372,32 @@ function bookCard(b) {
        <div class="small">반납예정: <b>${escapeHtml(b.currentLoan.dueDate || "-")}</b></div>`
     : `<div class="small">상태: 비치중</div>`;
 
+  const authors = (b.authors || []).join(", ") || "";
+  const hasThumb = !!b.thumbnail;
+
   el.innerHTML = `
-    <div class="book-top">
-      <img class="cover" src="${escapeAttr(b.thumbnail || "")}" alt="" onerror="this.style.display='none'"/>
-      <div class="book-meta">
-        <div class="book-title">${escapeHtml(b.title || "")}</div>
-        <div class="book-sub">${escapeHtml((b.authors || []).join(", ") || "")}</div>
+    <div class="book-cover">
+      <div class="cover-frame${hasThumb ? "" : " no-img"}">
+        ${hasThumb ? `<img class="cover-img" src="${escapeAttr(b.thumbnail || "")}" alt="" onerror="this.remove(); this.parentElement.classList.add('no-img');"/>` : ""}
+        <div class="cover-placeholder">
+          <div class="ph-title">${escapeHtml(b.title || "")}</div>
+          <div class="ph-sub">${escapeHtml(authors || "저자 정보 없음")}</div>
+        </div>
+      </div>
+      <div class="cover-badge badge ${statusLabel.cls}">${statusLabel.text}</div>
+      ${dueLine ? `<div class="cover-chip">${dueLine}</div>` : ""}
+      ${idx < 3 ? `<div class="cover-ribbon">BEST</div>` : ""}
+    </div>
+    <div class="book-info">
+      <div class="book-title">${escapeHtml(b.title || "")}</div>
+      <div class="book-sub">${escapeHtml(authors)}</div>
+      <div class="book-meta-lines">
         <div class="small">인벤번호: <b>${escapeHtml(b.invNo)}</b></div>
         <div class="small">ISBN: ${escapeHtml(b.isbn13 || b.isbn10 || "-")}</div>
         ${loanLine}
-        ${badge}
+        <div class="small">분류: ${escapeHtml((b.categories || []).join(", ") || "-")}</div>
+        <div class="small">메모: ${escapeHtml(b.note || "-")}</div>
       </div>
-    </div>
-    <div class="book-body">
-      <div class="small">분류: ${escapeHtml((b.categories || []).join(", ") || "-")}</div>
-      <div class="small">메모: ${escapeHtml(b.note || "-")}</div>
     </div>
     <div class="actions">
       ${b.status === "available"
@@ -424,16 +520,16 @@ async function googleBooksSearch(query) {
   const term = isIsbn ? `isbn:${q.replace(/-/g, "")}` : q;
 
   // Public endpoint: GET https://www.googleapis.com/books/v1/volumes?q={search terms}
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(term)}&maxResults=10`;
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(term)}&maxResults=10&key=${encodeURIComponent(GOOGLE_BOOKS_API_KEY)}`;
 
   const res = await fetch(url);
   if (!res.ok) throw new Error("API 실패");
   const json = await res.json();
   const items = json.items || [];
-  return items.map(normalizeVolume).filter(Boolean);
+  return items.map(normalizeGoogleVolume).filter(Boolean);
 }
 
-function normalizeVolume(item) {
+function normalizeGoogleVolume(item) {
   try {
     const v = item.volumeInfo || {};
     const ids = v.industryIdentifiers || [];
@@ -461,6 +557,69 @@ function normalizeVolume(item) {
   } catch {
     return null;
   }
+}
+
+// -------------------- Open Library API (fallback) --------------------
+async function openLibrarySearch(query) {
+  const q = query.trim();
+  if (!q) return [];
+
+  const isIsbn = /^[0-9Xx-]{10,20}$/.test(q);
+  const term = isIsbn ? `isbn:${q.replace(/-/g, "")}` : q;
+
+  // Public endpoint: GET https://openlibrary.org/search.json?q={search terms}
+  const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(term)}&limit=10`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("API 실패");
+  const json = await res.json();
+  const docs = json.docs || [];
+  return docs.map(normalizeOpenLibraryDoc).filter(Boolean);
+}
+
+function normalizeOpenLibraryDoc(doc) {
+  try {
+    const isbns = Array.isArray(doc.isbn) ? doc.isbn : [];
+    const pickIsbn = (len) => isbns.find((v) => String(v).replace(/-/g, "").length === len);
+    const isbn13 = pickIsbn(13) || "";
+    const isbn10 = pickIsbn(10) || "";
+
+    let thumb = "";
+    if (doc.cover_i) {
+      thumb = `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`;
+    } else if (isbn13 || isbn10) {
+      const id = isbn13 || isbn10;
+      thumb = `https://covers.openlibrary.org/b/isbn/${id}-M.jpg`;
+    }
+
+    return {
+      title: doc.title || "",
+      subtitle: doc.subtitle || "",
+      authors: doc.author_name || [],
+      publisher: (doc.publisher && doc.publisher[0]) || "",
+      publishedDate: doc.first_publish_year ? String(doc.first_publish_year) : "",
+      description: "",
+      categories: doc.subject || [],
+      pageCount: doc.number_of_pages_median || null,
+      language: (doc.language && doc.language[0]) || "",
+      thumbnail: thumb,
+      isbn13,
+      isbn10
+    };
+  } catch {
+    return null;
+  }
+}
+
+// -------------------- Hybrid Search --------------------
+async function hybridBookSearch(query) {
+  try {
+    const g = await googleBooksSearch(query);
+    if (g && g.length > 0) return g;
+  } catch {
+    // fall back to Open Library below
+  }
+  return openLibrarySearch(query);
 }
 
 // -------------------- CRUD --------------------
@@ -777,7 +936,7 @@ $("#searchBtn").addEventListener("click", async () => {
   $("#searchEmpty").classList.add("is-show");
   $("#searchEmpty").textContent = "검색 중…";
   try {
-    const results = await googleBooksSearch(q);
+    const results = await hybridBookSearch(q);
     renderSearchResults(results);
   } catch (e) {
     $("#searchEmpty").classList.add("is-show");
@@ -897,18 +1056,34 @@ function escapeHtml(s) {
 }
 function escapeAttr(s){ return escapeHtml(s).replaceAll("\n"," "); }
 
-// first paint
-renderAll();
-
 // show empty placeholders
 function ensureEmptyStates() {
   $("#searchEmpty").classList.add("is-show");
   $("#booksEmpty").classList.toggle("is-show", Object.keys(data.books).length === 0);
 }
-ensureEmptyStates();
-
 
 // -------------------- Small UX: Enter to search --------------------
 $("#q").addEventListener("keydown", (e) => {
   if (e.key === "Enter") $("#searchBtn").click();
 });
+
+// -------------------- View Toggle (Grid/List) --------------------
+const VIEW_KEY = "goc_library_view";
+function applyView(view) {
+  const list = $("#booksList");
+  list.classList.toggle("list-view", view === "list");
+  $("#viewGridBtn")?.classList.toggle("is-active", view === "grid");
+  $("#viewListBtn")?.classList.toggle("is-active", view === "list");
+  localStorage.setItem(VIEW_KEY, view);
+}
+$("#viewGridBtn")?.addEventListener("click", () => applyView("grid"));
+$("#viewListBtn")?.addEventListener("click", () => applyView("list"));
+
+// -------------------- Init (Local + Firebase) --------------------
+initFirebase();
+(async () => {
+  data = await loadRemoteData(load());
+  renderAll();
+  ensureEmptyStates();
+  applyView(localStorage.getItem(VIEW_KEY) || "grid");
+})();

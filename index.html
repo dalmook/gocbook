@@ -99,7 +99,7 @@
 
         <div class="row gap-8 mt-12 wrap">
           <button class="btn btn-ghost" id="manualAddBtn">✍️ 수동 입력으로 등록</button>
-          <div class="pill" id="apiHint">Open API: Google Books</div>
+          <div class="pill" id="apiHint">Open API: Google Books + Open Library</div>
           <div class="pill" id="adminHint">🔒 잠금 상태에서는 등록/수정이 제한돼요</div>
         </div>
 
@@ -124,6 +124,10 @@
               <option value="loaned">대여중</option>
               <option value="overdue">연체</option>
             </select>
+            <div class="view-toggle">
+              <button class="btn btn-ghost" id="viewGridBtn" type="button">그리드</button>
+              <button class="btn btn-ghost" id="viewListBtn" type="button">리스트</button>
+            </div>
           </div>
         </div>
 
@@ -222,6 +226,8 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
