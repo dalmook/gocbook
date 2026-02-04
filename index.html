@@ -75,6 +75,35 @@
       </div>
     </section>
 
+      <!-- READING KING -->
+      <div class="card mt-16" id="readingKingCard">
+        <div class="row between center wrap">
+          <h2 class="h2">🏆 독서왕</h2>
+          <div class="row gap-8 center rk-controls">
+            <span class="muted">월</span>
+            <select id="rkMonthSelect" class="input rk-month"></select>
+          </div>
+        </div>
+
+        <div class="grid-2 mt-12">
+          <div>
+            <div class="h3">월별 TOP</div>
+            <div id="rkMonthlyList" class="list mt-8"></div>
+            <div class="empty is-show" id="rkMonthlyEmpty">이번 달 대여/반납 기록이 없어요.</div>
+          </div>
+
+          <div>
+            <div class="h3">누적 TOP</div>
+            <div id="rkAllList" class="list mt-8"></div>
+            <div class="empty is-show" id="rkAllEmpty">아직 대여/반납 기록이 없어요.</div>
+          </div>
+        </div>
+
+        <div class="muted mt-12">
+          기준: <b>반납</b> 기록 · 같은 사람은 <b>하루 최대 1권</b>만 인정 (반복 악용 방지)
+        </div>
+      </div>
+    
     <!-- ADD BOOK -->
     <section class="page" id="page-add">
       <div class="card">
