@@ -295,6 +295,143 @@ function renderDashboard() {
   }
 }
 
+} } } renderReadingKings(); } function ensureReadingKingSection() {
+  const dash = $("#page-dashboard");
+  if (!dash) return null;
+
+  let sec = $("#readingKingSection");
+  if (sec) return sec;
+
+  sec = document.createElement("section");
+  sec.id = "readingKingSection";
+  sec.className = "card";
+  sec.style.marginTop = "14px";
+
+  sec.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="font-weight:800;font-size:16px;">🏆 독서왕</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="opacity:.75;font-size:12px;">월</span>
+        <select id="kingMonthSelect" style="padding:6px 10px;border-radius:10px;border:1px solid rgba(0,0,0,.15);"></select>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+      <div>
+        <div style="font-weight:700;margin:6px 0;">월별 TOP</div>
+        <div id="kingMonthList"></div>
+        <div id="kingMonthEmpty" class="empty is-show">이번 달 대여 이력이 없어요.</div>
+      </div>
+
+      <div>
+        <div style="font-weight:700;margin:6px 0;">누적 TOP</div>
+        <div id="kingAllList"></div>
+        <div id="kingAllEmpty" class="empty is-show">대여 이력이 없어요.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:8px;opacity:.7;font-size:12px;">
+      기준: '대여' 처리 횟수 (book.history)
+    </div>
+  `;
+
+  dash.appendChild(sec);
+
+  const sel = $("#kingMonthSelect");
+  if (sel && !sel.dataset.bound) {
+    sel.dataset.bound = "1";
+    sel.addEventListener("change", () => renderReadingKings());
+  }
+
+  return sec;
+}
+
+function collectLoanEvents() {
+  const events = [];
+  const books = Object.values(data.books || {});
+  for (const b of books) {
+    const hist = Array.isArray(b.history) ? b.history : [];
+    for (const h of hist) {
+      if (!h || h.type !== "대여") continue;
+      const borrower = String(h.borrower || h.by || "").trim();
+      if (!borrower) continue;
+
+      const loanDate = (h.loanDate || (h.at ? h.at.slice(0, 10) : "") || "").slice(0, 10);
+      const ym = loanDate ? loanDate.slice(0, 7) : "";
+      events.push({ borrower, loanDate, ym });
+    }
+  }
+  return events;
+}
+
+function topBorrowers(events) {
+  const m = new Map();
+  for (const e of events) m.set(e.borrower, (m.get(e.borrower) || 0) + 1);
+
+  const arr = Array.from(m.entries()).map(([name, cnt]) => ({ name, cnt }));
+  arr.sort((a, b) => (b.cnt - a.cnt) || a.name.localeCompare(b.name));
+  return arr;
+}
+
+function renderReadingKings() {
+  const sec = ensureReadingKingSection();
+  if (!sec) return;
+
+  const events = collectLoanEvents();
+  const curYm = new Date().toISOString().slice(0, 7);
+
+  // 월 목록 만들기 (대여 이력 있는 월만)
+  const monthsSet = new Set(events.map(e => e.ym).filter(Boolean));
+  const months = Array.from(monthsSet).sort((a, b) => b.localeCompare(a));
+  const options = months.length ? months : [curYm];
+
+  const sel = $("#kingMonthSelect");
+  const prev = sel?.value || "";
+  if (sel) {
+    sel.innerHTML = options.map(ym => `<option value="${ym}">${ym}</option>`).join("");
+    const next = options.includes(prev) ? prev : (options.includes(curYm) ? curYm : options[0]);
+    sel.value = next;
+  }
+
+  const chosenYm = sel ? sel.value : curYm;
+
+  const monthEvents = events.filter(e => e.ym === chosenYm);
+  const monthTop = topBorrowers(monthEvents).slice(0, 10);
+  const allTop = topBorrowers(events).slice(0, 10);
+
+  // 월별 TOP
+  const monthList = $("#kingMonthList");
+  if (monthList) monthList.innerHTML = "";
+  if (monthTop.length === 0) {
+    $("#kingMonthEmpty")?.classList.add("is-show");
+  } else {
+    $("#kingMonthEmpty")?.classList.remove("is-show");
+    monthTop.forEach((r, i) => {
+      monthList.appendChild(itemRow(
+        `${i + 1}위 · ${r.name}`,
+        `${chosenYm} · 대여 ${r.cnt}회`,
+        `${r.cnt}`
+      ));
+    });
+  }
+
+  // 누적 TOP
+  const allList = $("#kingAllList");
+  if (allList) allList.innerHTML = "";
+  if (allTop.length === 0) {
+    $("#kingAllEmpty")?.classList.add("is-show");
+  } else {
+    $("#kingAllEmpty")?.classList.remove("is-show");
+    allTop.forEach((r, i) => {
+      allList.appendChild(itemRow(
+        `${i + 1}위 · ${r.name}`,
+        `누적 · 대여 ${r.cnt}회`,
+        `${r.cnt}`
+      ));
+    });
+  }
+}
+
 function itemRow(title, sub, rightHtml) {
   const div = document.createElement("div");
   div.className = "item";
@@ -417,7 +554,7 @@ function bookCard(b, idx) {
     const diff = daysDiff(todayYmd(), due);
     const tag = diff < 0 ? `D${diff}` : `D-${diff}`;
     const borrower = b.currentLoan?.borrower || "-";
-    return `${escapeHtml(borrower)} ? ${escapeHtml(due)} (${tag})`;
+    return `${escapeHtml(borrower)} · ${escapeHtml(due)} (${tag})`;
   })();
 
   const loanLine = (b.status === "loaned")
