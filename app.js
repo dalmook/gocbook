@@ -417,7 +417,7 @@ function bookCard(b, idx) {
     const diff = daysDiff(todayYmd(), due);
     const tag = diff < 0 ? `D${diff}` : `D-${diff}`;
     const borrower = b.currentLoan?.borrower || "-";
-    return `${escapeHtml(borrower)} · ${escapeHtml(due)} (${tag})`;
+    return `${escapeHtml(borrower)} ? ${escapeHtml(due)} (${tag})`;
   })();
 
   const loanLine = (b.status === "loaned")
@@ -427,8 +427,17 @@ function bookCard(b, idx) {
 
   const authors = (b.authors || []).join(", ") || "";
   const hasThumb = !!b.thumbnail;
-
   const summary = truncateText(stripTags(b.description || ""), 140);
+
+  const overlaySummary = summary || "줄거리 정보가 없습니다.";
+  const overlayMeta = `
+    <div>인벤번호: ${escapeHtml(b.invNo)}</div>
+    <div>ISBN: ${escapeHtml(b.isbn13 || b.isbn10 || "-")}</div>
+    <div>출판사: ${escapeHtml(b.publisher || "-")}</div>
+    <div>출판일: ${escapeHtml(b.publishedDate || "-")}</div>
+    <div>분류: ${escapeHtml((b.categories || []).join(", ") || "-")}</div>
+    <div>메모: ${escapeHtml(b.note || "-")}</div>
+  `;
 
   el.innerHTML = `
     <div class="book-cover">
@@ -442,6 +451,13 @@ function bookCard(b, idx) {
       <div class="cover-badge badge ${statusLabel.cls}">${statusLabel.text}</div>
       ${dueLine ? `<div class="cover-chip">${dueLine}</div>` : ""}
       ${idx < 3 ? `<div class="cover-ribbon">BEST</div>` : ""}
+      <div class="cover-overlay" aria-hidden="true">
+        <button class="cover-overlay-close" type="button" aria-label="닫기">?</button>
+        <div class="overlay-title">${escapeHtml(b.title || "")}</div>
+        <div class="overlay-sub">${escapeHtml(authors || "저자 정보 없음")}</div>
+        <div class="overlay-summary">${escapeHtml(overlaySummary)}</div>
+        <div class="overlay-meta">${overlayMeta}</div>
+      </div>
     </div>
     <div class="book-info">
       <div class="book-title">${escapeHtml(b.title || "")}</div>
@@ -457,18 +473,36 @@ function bookCard(b, idx) {
     </div>
     <div class="actions">
       ${b.status === "available"
-        ? `<button class="btn" data-act="checkout" data-id="${escapeAttr(b.invNo)}">📌 대여</button>`
-        : `<button class="btn" data-act="return" data-id="${escapeAttr(b.invNo)}">✅ 반납</button>
-           <button class="btn btn-ghost" data-act="extend" data-id="${escapeAttr(b.invNo)}">🗓️ 연장</button>`
+        ? `<button class="btn" data-act="checkout" data-id="${escapeAttr(b.invNo)}">대여</button>`
+        : `<button class="btn" data-act="return" data-id="${escapeAttr(b.invNo)}">반납</button>
+           <button class="btn btn-ghost" data-act="extend" data-id="${escapeAttr(b.invNo)}">연장</button>`
       }
-      <button class="btn btn-ghost" data-act="edit" data-id="${escapeAttr(b.invNo)}">✏️ 수정</button>
-      <button class="btn btn-danger" data-act="del" data-id="${escapeAttr(b.invNo)}">🗑️ 삭제</button>
+      <button class="btn btn-ghost" data-act="edit" data-id="${escapeAttr(b.invNo)}">정보 수정</button>
+      <button class="btn btn-danger" data-act="del" data-id="${escapeAttr(b.invNo)}">삭제</button>
     </div>
   `;
 
   el.querySelectorAll("[data-act]").forEach((btn) => {
     btn.addEventListener("click", () => onBookAction(btn.dataset.act, btn.dataset.id));
   });
+
+  const cover = el.querySelector(".book-cover");
+  const closeBtn = el.querySelector(".cover-overlay-close");
+  if (cover) {
+    cover.addEventListener("click", (e) => {
+      if (e.target.closest(".cover-overlay-close")) {
+        el.classList.remove("show-detail");
+        return;
+      }
+      el.classList.toggle("show-detail");
+    });
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      el.classList.remove("show-detail");
+    });
+  }
 
   return el;
 }
@@ -539,7 +573,7 @@ function hasPinSet() {
 async function promptPinAndUnlock() {
   if (!hasPinSet()) {
     // require PIN to enter admin mode
-    toast("??? PIN? ???? ?????. ???? PIN? ?? ?????.");
+    toast("관리자 PIN이 설정되지 않았습니다. 설정에서 PIN을 먼저 등록하세요.");
     return;
   }
   const pin = await dialogPrompt("관리자 PIN 입력", `
@@ -879,20 +913,60 @@ async function editBook(invNo) {
   const b = data.books[invNo];
   if (!b) return;
 
-  const form = await dialogForm("도서 수정", `
-    <div class="muted">${escapeHtml(invNo)} · ${escapeHtml(b.title)}</div>
+  const form = await dialogForm("도서 정보 수정", `
+    <div class="muted">${escapeHtml(invNo)} ? ${escapeHtml(b.title)}</div>
     <div class="grid-2 mt-12">
-      <div class="field"><label>메모</label><input id="eNote2" value="${escapeAttr(b.note || "")}" placeholder="예: 책장 위치" /></div>
-      <div class="field"><label>분류(쉼표구분)</label><input id="eCat2" value="${escapeAttr((b.categories || []).join(", "))}" placeholder="예: 개발, 운영" /></div>
+      <div class="field"><label>제목</label><input id="eTitle" value="${escapeAttr(b.title || "")}" /></div>
+      <div class="field"><label>부제</label><input id="eSub" value="${escapeAttr(b.subtitle || "")}" /></div>
+    </div>
+    <div class="grid-2 mt-12">
+      <div class="field"><label>저자(쉼표 구분)</label><input id="eAuthors" value="${escapeAttr((b.authors || []).join(", "))}" /></div>
+      <div class="field"><label>ISBN</label><input id="eIsbn" value="${escapeAttr(b.isbn13 || b.isbn10 || "")}" /></div>
+    </div>
+    <div class="grid-2 mt-12">
+      <div class="field"><label>출판사</label><input id="ePub" value="${escapeAttr(b.publisher || "")}" /></div>
+      <div class="field"><label>출판일</label><input id="eDate" value="${escapeAttr(b.publishedDate || "")}" placeholder="YYYY-MM-DD 또는 YYYY" /></div>
+    </div>
+    <div class="grid-2 mt-12">
+      <div class="field"><label>언어</label><input id="eLang" value="${escapeAttr(b.language || "")}" /></div>
+      <div class="field"><label>페이지 수</label><input id="ePages" type="number" min="0" value="${escapeAttr(b.pageCount || "")}" /></div>
+    </div>
+    <div class="field mt-12"><label>표지 이미지 URL</label><input id="eThumb" value="${escapeAttr(b.thumbnail || "")}" placeholder="https://..." /></div>
+    <div class="field mt-12"><label>줄거리/설명</label><textarea id="eDesc" rows="4">${escapeHtml(b.description || "")}</textarea></div>
+    <div class="grid-2 mt-12">
+      <div class="field"><label>분류(쉼표 구분)</label><input id="eCat" value="${escapeAttr((b.categories || []).join(", "))}" /></div>
+      <div class="field"><label>메모</label><input id="eNote" value="${escapeAttr(b.note || "")}" /></div>
     </div>
   `, () => ({
-    note: $("#eNote2").value.trim(),
-    categories: $("#eCat2").value.trim()
+    title: $("#eTitle").value.trim(),
+    subtitle: $("#eSub").value.trim(),
+    authors: $("#eAuthors").value.trim(),
+    isbn: $("#eIsbn").value.trim(),
+    publisher: $("#ePub").value.trim(),
+    publishedDate: $("#eDate").value.trim(),
+    language: $("#eLang").value.trim(),
+    pageCount: $("#ePages").value.trim(),
+    thumbnail: $("#eThumb").value.trim(),
+    description: $("#eDesc").value.trim(),
+    categories: $("#eCat").value.trim(),
+    note: $("#eNote").value.trim()
   }));
   if (!form) return;
+  if (!form.title) return toast("제목은 필수입니다.");
 
-  b.note = form.note;
+  b.title = form.title;
+  b.subtitle = form.subtitle;
+  b.authors = form.authors ? form.authors.split(",").map(s => s.trim()).filter(Boolean) : [];
+  b.isbn13 = form.isbn || "";
+  b.isbn10 = "";
+  b.publisher = form.publisher;
+  b.publishedDate = form.publishedDate;
+  b.language = form.language;
+  b.pageCount = form.pageCount ? Number(form.pageCount) : null;
+  b.thumbnail = form.thumbnail;
+  b.description = form.description;
   b.categories = form.categories ? form.categories.split(",").map(s => s.trim()).filter(Boolean) : [];
+  b.note = form.note;
 
   pushActivity(data, { type: "수정", invNo, title: b.title });
 
