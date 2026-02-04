@@ -15,6 +15,7 @@ const FIREBASE_CONFIG = {
   measurementId: "G-BTD4Y2213N"
 };
 const FIREBASE_DOC_ID = "default";
+const CLIENT_ID_KEY = "goc_library_client_id";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -36,6 +37,10 @@ function defaultData() {
   return {
     version: 1,
     seq: 1,
+    meta: {
+      updatedAt: 0,
+      updatedBy: ""
+    },
     settings: {
       libName: "GOC 도서관",
       defaultLoanDays: 14,
@@ -66,12 +71,24 @@ function normalizeData(input) {
   const base = defaultData();
   const data = input && typeof input === "object" ? input : base;
   if (!data.version) data.version = 1;
+  if (!data.meta) data.meta = base.meta;
   if (!data.settings) data.settings = base.settings;
   if (!data.books) data.books = {};
   if (!data.activity) data.activity = [];
   if (!Number.isFinite(data.seq)) data.seq = 1;
   return data;
 }
+
+function getClientId() {
+  let id = localStorage.getItem(CLIENT_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID ? crypto.randomUUID() : `c_${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(CLIENT_ID_KEY, id);
+  }
+  return id;
+}
+
+const CLIENT_ID = getClientId();
 
 function load() {
   try {
@@ -93,6 +110,9 @@ function scheduleRemoteSave(data) {
   clearTimeout(remoteSaveTimer);
   remoteSaveTimer = setTimeout(async () => {
     try {
+      data.meta = data.meta || {};
+      data.meta.updatedAt = Date.now();
+      data.meta.updatedBy = CLIENT_ID;
       await db.collection("libraries").doc(FIREBASE_DOC_ID).set(data);
     } catch (e) {
       console.warn("Firebase save failed", e);
@@ -121,6 +141,25 @@ async function loadRemoteData(localData) {
     toast("Firebase 연결 실패. 로컬 데이터 사용.");
   }
   return localData;
+}
+
+function startRemoteSync() {
+  if (!remoteReady || !db) return;
+  db.collection("libraries").doc(FIREBASE_DOC_ID).onSnapshot((snap) => {
+    if (!snap.exists) return;
+    const remote = normalizeData(snap.data());
+    const localUpdated = data?.meta?.updatedAt || 0;
+    const remoteUpdated = remote?.meta?.updatedAt || 0;
+    if (remoteUpdated > localUpdated) {
+      data = remote;
+      saveLocal(data);
+      renderAll();
+      ensureEmptyStates();
+      applyView(localStorage.getItem(VIEW_KEY) || "grid");
+    }
+  }, (err) => {
+    console.warn("Firebase snapshot failed", err);
+  });
 }
 function toast(msg) {
   const el = $("#toast");
@@ -998,53 +1037,6 @@ $("#resetBtn").addEventListener("click", async () => {
   showPage("dashboard");
 });
 
-// Backup / Restore
-$("#exportBtn").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `goc-library-backup-${todayYmd()}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast("백업 파일 다운로드!");
-});
-
-$("#importFile").addEventListener("change", async (e) => {
-  if (!guardAdmin()) {
-    e.target.value = "";
-    return;
-  }
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  const text = await file.text();
-  try {
-    const obj = JSON.parse(text);
-    const ok = await dialogConfirm("가져오기", `
-      <div>이 백업 파일로 데이터를 <b>덮어쓸까요?</b></div>
-      <div class="muted mt-8">현재 데이터는 사라집니다. (필요하면 먼저 백업하세요)</div>
-    `);
-    if (!ok) return;
-
-    data = obj;
-    // normalize
-    data.version ||= 1;
-    data.settings ||= defaultData().settings;
-    data.books ||= {};
-    data.activity ||= [];
-    data.seq ||= 1;
-
-    save(data);
-    toast("가져오기 완료!");
-    renderAll();
-    showPage("dashboard");
-  } catch {
-    toast("가져오기 실패: JSON 형식이 올바르지 않아요.");
-  } finally {
-    e.target.value = "";
-  }
-});
-
 // Init
 function escapeHtml(s) {
   return String(s ?? "")
@@ -1086,4 +1078,5 @@ initFirebase();
   renderAll();
   ensureEmptyStates();
   applyView(localStorage.getItem(VIEW_KEY) || "grid");
+  startRemoteSync();
 })();

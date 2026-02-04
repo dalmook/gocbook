@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap");
 
 :root{
   --bg:#f5f7fb;
@@ -27,7 +27,7 @@ body{
     linear-gradient(180deg, rgba(255,255,255,.8), rgba(245,247,251,.95)),
     var(--bg);
   color:var(--text);
-  font-family: "Plus Jakarta Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
 a{color:inherit}
@@ -178,10 +178,19 @@ select{cursor:pointer}
   min-height: 320px;
   box-shadow: 0 14px 30px rgba(16,22,38,.1);
   transition: transform .18s ease, box-shadow .18s ease;
+  animation: fadeUp .4s ease both;
 }
+.grid-cards .book:nth-child(1){animation-delay:.02s}
+.grid-cards .book:nth-child(2){animation-delay:.05s}
+.grid-cards .book:nth-child(3){animation-delay:.08s}
+.grid-cards .book:nth-child(4){animation-delay:.11s}
+.grid-cards .book:nth-child(5){animation-delay:.14s}
+.grid-cards .book:nth-child(6){animation-delay:.17s}
+.grid-cards .book:nth-child(7){animation-delay:.2s}
+.grid-cards .book:nth-child(8){animation-delay:.23s}
 .book:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(33,22,10,.12);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 44px rgba(16,22,38,.14);
 }
 .book-cover{
   position:relative;
@@ -199,6 +208,11 @@ select{cursor:pointer}
   border:1px solid rgba(231,233,242,.9);
   object-fit: cover;
   box-shadow: 0 10px 18px rgba(16,22,38,.12);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.book:hover .cover-img{
+  transform: translateY(-2px);
+  box-shadow: 0 16px 24px rgba(16,22,38,.16);
 }
 .cover-placeholder{
   min-height: 220px;
@@ -281,6 +295,17 @@ select{cursor:pointer}
   flex-wrap:wrap;
 }
 .actions .btn{padding:8px 10px; border-radius: 12px}
+
+@keyframes fadeUp{
+  from{opacity:0; transform: translateY(10px)}
+  to{opacity:1; transform: translateY(0)}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .book{animation:none; transition:none}
+  .book:hover{transform:none}
+  .cover-img{transition:none}
+}
 
 .view-toggle{
   display:inline-flex;
