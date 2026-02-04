@@ -1111,9 +1111,25 @@ $("#saveSettingsBtn").addEventListener("click", async () => {
 
 $("#resetBtn").addEventListener("click", async () => {
   if (!guardAdmin()) return;
-  const ok = await dialogConfirm("전체 초기화", `
+  if (!hasPinSet()) {
+    toast("관리자 PIN이 설정되지 않았습니다. 설정에서 PIN을 먼저 등록하세요.");
+    return;
+  }
+  const pin = await dialogPrompt("관리자 PIN 재확인", `
+    <div class="field">
+      <label>PIN</label>
+      <input id="pinInputReset" type="password" inputmode="numeric" placeholder="PIN 입력" />
+    </div>
+  `, () => $("#pinInputReset")?.value?.trim());
+  if (pin == null) return;
+  const { hash } = await pinHash(pin, data.settings.pinSalt);
+  if (hash !== data.settings.pinHash) {
+    toast("PIN이 올바르지 않아요.");
+    return;
+  }
+  const ok = await dialogConfirm("데이터 초기화", `
     <div class="danger">정말로 모든 데이터를 삭제할까요?</div>
-    <div class="muted mt-8">도서/대여/활동 기록이 전부 삭제됩니다.</div>
+    <div class="muted mt-8">도서/대여 기록이 모두 삭제됩니다.</div>
   `);
   if (!ok) return;
   data = defaultData();
