@@ -769,7 +769,6 @@ async function manualAdd() {
 }
 
 async function checkoutBook(invNo) {
-  if (!guardAdmin()) return;
   const b = data.books[invNo];
   if (!b) return;
   if (b.status !== "available") return toast("이미 대여중입니다.");
@@ -820,7 +819,6 @@ async function checkoutBook(invNo) {
 }
 
 async function returnBook(invNo) {
-  if (!guardAdmin()) return;
   const b = data.books[invNo];
   if (!b) return;
   if (b.status !== "loaned") return toast("대여중이 아닙니다.");
@@ -847,7 +845,6 @@ async function returnBook(invNo) {
 }
 
 async function extendBook(invNo) {
-  if (!guardAdmin()) return;
   const b = data.books[invNo];
   if (!b || b.status !== "loaned") return;
 
