@@ -219,7 +219,7 @@ async function pinHash(pin, saltB64) {
 }
 
 let data = load();
-let unlocked = true;
+let unlocked = false;
 
 // -------------------- Tabs / Router --------------------
 function showPage(name) {
@@ -538,9 +538,8 @@ function hasPinSet() {
 
 async function promptPinAndUnlock() {
   if (!hasPinSet()) {
-    // allow unlock if no pin set (first run)
-    unlocked = true;
-    toast("PIN이 설정되지 않아 임시로 관리자 모드로 전환했어요. 설정에서 PIN을 지정해줘!");
+    // require PIN to enter admin mode
+    toast("??? PIN? ???? ?????. ???? PIN? ?? ?????.");
     return;
   }
   const pin = await dialogPrompt("관리자 PIN 입력", `
