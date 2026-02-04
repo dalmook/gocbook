@@ -1158,6 +1158,9 @@ $("#q").addEventListener("keydown", (e) => {
 
 // -------------------- View Toggle (Grid/List) --------------------
 const VIEW_KEY = "goc_library_view";
+function getDefaultView() {
+  return window.matchMedia("(max-width: 720px)").matches ? "list" : "grid";
+}
 function applyView(view) {
   const list = $("#booksList");
   const monthlyList = $("#monthlyBooksList");
@@ -1176,6 +1179,6 @@ initFirebase();
   data = await loadRemoteData(load());
   renderAll();
   ensureEmptyStates();
-  applyView(localStorage.getItem(VIEW_KEY) || "grid");
+  applyView(localStorage.getItem(VIEW_KEY) || getDefaultView());
   startRemoteSync();
 })();
