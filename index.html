@@ -22,16 +22,16 @@
   </header>
 
   <nav class="tabs" aria-label="메뉴">
-    <button class="tab is-active" data-page="dashboard">대시보드</button>
-    <button class="tab" data-page="add">도서 등록</button>
-    <button class="tab" data-page="books">보유 도서</button>
+    <button class="tab is-active" data-page="books">보유 도서</button>
     <button class="tab" data-page="loans">대여 현황</button>
+    <button class="tab" data-page="dashboard">대시보드</button>
+    <button class="tab" data-page="add">도서 등록</button>
     <button class="tab" data-page="settings">설정</button>
   </nav>
 
   <main class="container">
     <!-- DASHBOARD -->
-    <section class="page is-active" id="page-dashboard">
+    <section class="page" id="page-dashboard">
       <div class="grid-3">
         <div class="card">
           <div class="card-h">총 보유</div>
@@ -107,7 +107,7 @@
     </section>
 
     <!-- BOOKS -->
-    <section class="page" id="page-books">
+    <section class="page is-active" id="page-books">
       <div class="card">
         <div class="row between center">
           <h2 class="h2">보유 도서</h2>

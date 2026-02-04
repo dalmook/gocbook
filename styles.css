@@ -57,6 +57,11 @@ a{color:inherit}
   border:1px solid rgba(47,107,255,.25);
 }
 .title{font-weight:800; letter-spacing:.2px; font-family:"Playfair Display", serif}
+.title{
+  font-weight:700;
+  letter-spacing:.4px;
+  font-size:20px;
+}
 .subtitle{color:var(--muted); font-size:12px; margin-top:2px}
 
 .top-actions{display:flex; gap:8px; align-items:center}
@@ -113,6 +118,19 @@ a{color:inherit}
 @media (max-width: 900px){
   .grid-3{grid-template-columns: 1fr}
   .grid-2{grid-template-columns: 1fr}
+}
+@media (max-width: 720px){
+  .topbar{flex-direction:column; align-items:flex-start}
+  .tabs{overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px}
+  .tab{flex:0 0 auto; white-space:nowrap}
+  .form-row{grid-template-columns: 1fr}
+  .grid-cards{grid-template-columns: repeat(2, 1fr);}
+}
+@media (max-width: 520px){
+  .container{padding:14px}
+  .grid-cards{grid-template-columns: 1fr;}
+  .actions{gap:6px}
+  .table{min-width: 720px}
 }
 
 .btn{

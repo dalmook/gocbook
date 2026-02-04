@@ -219,7 +219,7 @@ async function pinHash(pin, saltB64) {
 }
 
 let data = load();
-let unlocked = false;
+let unlocked = true;
 
 // -------------------- Tabs / Router --------------------
 function showPage(name) {
