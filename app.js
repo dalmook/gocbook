@@ -660,27 +660,24 @@ function renderAll() {
 }
 
 // -------------------- Reading King (독서왕) --------------------
-// 기준: 반납 이벤트 (book.history에서 type === "반납")
-// 악용 방지: 같은 사람은 같은 날짜(YYYY-MM-DD)에 여러 번 반납/대여 반복해도 "하루 1권"만 인정
 function renderReadingKings() {
+  const card = $("#readingKingCard");
   const sel = $("#rkMonthSelect");
+  const monthLabel = $("#rkMonthLabel");
+
   const monthListEl = $("#rkMonthlyList");
   const allListEl = $("#rkAllList");
   const monthEmpty = $("#rkMonthlyEmpty");
   const allEmpty = $("#rkAllEmpty");
 
-  // 대시보드가 아니거나 DOM이 아직 없으면 조용히 종료
   if (!sel || !monthListEl || !allListEl) return;
 
-  // change 이벤트 1회만 바인딩
   if (!sel.dataset.bound) {
     sel.dataset.bound = "1";
     sel.addEventListener("change", () => renderReadingKings());
   }
 
   const events = rk_collectReturnEvents_(); // { borrower, day, ym }
-
-  // 월 옵션 구성 (기록 있는 월 + 현재 월)
   const curYm = todayYmd().slice(0, 7);
   const months = rk_buildMonthOptions_(events, curYm);
 
@@ -689,38 +686,23 @@ function renderReadingKings() {
   sel.value = months.includes(prev) ? prev : (months.includes(curYm) ? curYm : months[0]);
 
   const chosenYm = sel.value;
+  if (monthLabel) monthLabel.textContent = chosenYm;
 
-  // 랭킹 계산 (하루 1권 제한)
   const { monthTop, allTop } = rk_rankBorrowers_onePerDay_(events, chosenYm);
 
-  // 렌더
-  monthListEl.innerHTML = "";
-  allListEl.innerHTML = "";
+  // ✅ 포디움(Top3) 렌더
+  rk_renderPodium_("M", monthTop);
+  rk_renderPodium_("A", allTop);
 
-  if (!monthTop.length) {
-    monthEmpty && monthEmpty.classList.add("is-show");
-  } else {
-    monthEmpty && monthEmpty.classList.remove("is-show");
-    monthTop.slice(0, 10).forEach((r, i) => {
-      monthListEl.appendChild(itemRow(
-        `${i + 1}위 · ${r.name}`,
-        `${chosenYm} · 하루 1권 기준`,
-        `<span class="pill">${r.cnt}권</span>`
-      ));
-    });
-  }
+  // ✅ 리스트(Top10) 렌더 + 게이지(1위 대비 %)
+  rk_renderRankList_(monthListEl, monthTop, `${chosenYm} · 하루 1권 기준`, monthEmpty);
+  rk_renderRankList_(allListEl, allTop, `누적 · 하루 1권 기준`, allEmpty);
 
-  if (!allTop.length) {
-    allEmpty && allEmpty.classList.add("is-show");
-  } else {
-    allEmpty && allEmpty.classList.remove("is-show");
-    allTop.slice(0, 10).forEach((r, i) => {
-      allListEl.appendChild(itemRow(
-        `${i + 1}위 · ${r.name}`,
-        `누적 · 하루 1권 기준`,
-        `<span class="pill">${r.cnt}권</span>`
-      ));
-    });
+  // ✅ 축하 이펙트(리렌더 시 잠깐 팡!)
+  if (card) {
+    card.classList.remove("rk-pop");
+    void card.offsetWidth; // reflow to restart animation
+    card.classList.add("rk-pop");
   }
 }
 
@@ -774,6 +756,63 @@ function rk_rankBorrowers_onePerDay_(events, ym) {
     monthTop: toArr(monthMap),
     allTop: toArr(allMap),
   };
+}
+
+function rk_renderPodium_(prefix, list) {
+  // prefix: "M"(월별) or "A"(누적)
+  const top1 = list[0] || null;
+  const top2 = list[1] || null;
+  const top3 = list[2] || null;
+
+  rk_setSpot_(`rk${prefix}1`, top1);
+  rk_setSpot_(`rk${prefix}2`, top2);
+  rk_setSpot_(`rk${prefix}3`, top3);
+}
+
+function rk_setSpot_(id, item) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const nameEl = el.querySelector(".rk-name");
+  const cntEl = el.querySelector(".rk-count");
+
+  if (!item) {
+    if (nameEl) nameEl.textContent = "-";
+    if (cntEl) cntEl.textContent = "0권";
+    el.style.opacity = ".65";
+    return;
+  }
+
+  el.style.opacity = "1";
+  if (nameEl) nameEl.textContent = item.name;
+  if (cntEl) cntEl.textContent = `${item.cnt}권`;
+}
+
+function rk_renderRankList_(container, list, subtitle, emptyEl) {
+  container.innerHTML = "";
+
+  if (!list.length) {
+    emptyEl && emptyEl.classList.add("is-show");
+    return;
+  }
+  emptyEl && emptyEl.classList.remove("is-show");
+
+  const topCnt = list[0]?.cnt || 0;
+
+  list.slice(0, 10).forEach((r, i) => {
+    const pct = topCnt ? Math.max(8, Math.round((r.cnt / topCnt) * 100)) : 0;
+
+    const rightHtml = `
+      <div class="rk-right">
+        <span class="pill">${r.cnt}권</span>
+        <div class="rk-bar"><div class="rk-bar__fill" style="width:${pct}%"></div></div>
+      </div>
+    `;
+
+    container.appendChild(
+      itemRow(`${i + 1}위 · ${r.name}`, subtitle, rightHtml)
+    );
+  });
 }
 
 // -------------------- Admin Guard --------------------
